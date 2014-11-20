@@ -74,6 +74,10 @@ chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/install.d/20-i
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
 # Patch 0007-Use-binary-deps.d-for-dracut-ramdisks.patch has the same issue
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/ramdisk-base/post-install.d/01-ensure-binaries
+# As does patch 0009-Enable-RHEL-Registration.patch
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/finalise.d/99-unregister
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/pre-install.d/00-rhel-registration
 
 %description
 Components of TripleO that are responsible for building disk images.
