@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	12%{?dist}
+Release:	13%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -17,6 +17,7 @@ Patch0007: 0007-Use-binary-deps.d-for-dracut-ramdisks.patch
 Patch0008: 0008-Remove-duplicate-binary-deps-from-dracut-ramdisk.patch
 Patch0009: 0009-Enable-RHEL-Registration.patch
 Patch0010: 0010-Update-RHEL-Registration.patch
+Patch0011: 0011-Allow-source-repositories-to-be-disabled-completely.patch
 
 BuildArch: noarch
 BuildRequires: python2-devel
@@ -45,6 +46,7 @@ Requires: dib-utils
 %patch0008 -p1
 %patch0009 -p1
 %patch0010 -p1
+%patch0011 -p1
 
 %build
 %{__python} setup.py build
@@ -91,6 +93,9 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Fri Nov 21 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-13
+- Allow source-repositories to be disabled completely
+
 * Thu Nov 20 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-12
 - Update RHEL Registration
 
