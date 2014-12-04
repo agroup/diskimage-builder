@@ -1,0 +1,68 @@
+From b4897d1c279de97cb777b5aa2b08d7365b320dd5 Mon Sep 17 00:00:00 2001
+From: James Slagle <jslagle@redhat.com>
+Date: Thu, 4 Dec 2014 15:03:08 -0500
+Subject: [PATCH] Allow injecting arbitrary yum repo configuration
+
+Allows specifying the path to a yum repo configuration file to be used
+during the image build process. The repo configuration file is removed
+at the end of the build. This is useful in that it allows using any
+arbitrary repo configuration during an image build.
+
+Change-Id: I7d5c67d74a0bb4722ffc60aacfd9fa7e80fb59d5
+---
+ elements/yum/README.md                         |  5 +++++
+ elements/yum/cleanup.d/99-remove-yum-repo-conf |  6 ++++++
+ elements/yum/extra-data.d/99-yum-repo-conf     | 18 ++++++++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100755 elements/yum/cleanup.d/99-remove-yum-repo-conf
+ create mode 100755 elements/yum/extra-data.d/99-yum-repo-conf
+
+diff --git a/elements/yum/README.md b/elements/yum/README.md
+index b38a94f..2425a7f 100644
+--- a/elements/yum/README.md
++++ b/elements/yum/README.md
+@@ -8,3 +8,8 @@ chroot so that they can be reused by subsequent image builds.  The cache
+ increases image building speed when building multiple images, especially on
+ slow connections.  This is more effective than using an HTTP proxy as a yum
+ cache since the same rpm from different mirrors is often requested.
++
++A custom yum repository configuration can also be applied by defining
++`DIB_YUM_REPO_CONF` to the path to a repo configuration file. The file will
++be copied to /etc/yum.repos.d/dib-yum-repo-conf.repo during the image build,
++and then removed at the end of the build.
+diff --git a/elements/yum/cleanup.d/99-remove-yum-repo-conf b/elements/yum/cleanup.d/99-remove-yum-repo-conf
+new file mode 100755
+index 0000000..887aa4f
+--- /dev/null
++++ b/elements/yum/cleanup.d/99-remove-yum-repo-conf
+@@ -0,0 +1,6 @@
++#!/bin/bash
++
++set -eux
++set -o pipefail
++
++sudo rm -f $TMP_MOUNT_PATH/etc/yum.repos.d/dib-yum-repo-conf.repo
+diff --git a/elements/yum/extra-data.d/99-yum-repo-conf b/elements/yum/extra-data.d/99-yum-repo-conf
+new file mode 100755
+index 0000000..f0dde92
+--- /dev/null
++++ b/elements/yum/extra-data.d/99-yum-repo-conf
+@@ -0,0 +1,18 @@
++#!/bin/bash
++# Add an additional yum repo configuration with $DIB_YUM_REPO_CONF
++
++set -eux
++set -o pipefail
++
++# exit directly if DIB_YUM_REPO_CONF is not defined properly
++if [ -z "${DIB_YUM_REPO_CONF:-}" ] ; then
++    echo "DIB_YUM_REPO_CONF is not set - no repo configuration will be copied in"
++    exit 0
++elif [ ! -f "$DIB_YUM_REPO_CONF" ] ; then
++    echo "DIB_YUM_REPO_CONF is not a valid yum repo configuration file."
++    echo "You should assign a proper yum repo configuration file in DIB_YUM_REPO_CONF"
++    exit 1
++fi
++
++# copy the yum repo configuration
++sudo cp -L -f $DIB_YUM_REPO_CONF $TMP_MOUNT_PATH/etc/yum.repos.d/dib-yum-repo-conf.repo

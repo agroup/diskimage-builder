@@ -1,0 +1,54 @@
+From 322210c2e70140485ec4ceab4867e9bfe7318809 Mon Sep 17 00:00:00 2001
+From: Ben Nemec <bnemec@redhat.com>
+Date: Wed, 15 Oct 2014 12:07:33 -0400
+Subject: [PATCH] Allow source-repositories to be disabled completely
+
+In our official image builds we are only allowed to use resources
+that are "blessed" by the build system.  This means that external
+things like git repos and tar files are not allowed.  Currently,
+even in offline mode source-repositories expects those things to
+be available in the cache, so we need a way to disable it entirely.
+
+This change adds an environment variable NO_SOURCE_REPOSITORIES
+that does so.  It can be set in an environment.d script so elements
+that might rely on a source repository will know it's not available.
+The 02-lsb script in redhat-common is one such example and is
+updated to handle this case.
+
+Change-Id: I0de63bee6ad79733d6711478c707a9b41593e85f
+
+Conflicts:
+	elements/redhat-common/pre-install.d/02-lsb
+---
+ elements/source-repositories/README.md                           | 4 ++++
+ elements/source-repositories/extra-data.d/98-source-repositories | 5 +++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/elements/source-repositories/README.md b/elements/source-repositories/README.md
+index edd8ea5..1967731 100644
+--- a/elements/source-repositories/README.md
++++ b/elements/source-repositories/README.md
+@@ -103,3 +103,7 @@ The base url for all git repositories can be set by use of:
+ So setting DIB\_GITREPOBASE=https://github.com/ when the repo location is set
+ to http://git.openstack.org/openstack/nova.git will result in use of the
+ https://github.com/openstack/nova.git repository.
++
++When doing image builds in environments where external resources are not allowed,
++it is possible to disable fetching of all source repositories by including an
++element in the image that sets NO_SOURCE_REPOSITORIES=1 in an environment.d script.
+diff --git a/elements/source-repositories/extra-data.d/98-source-repositories b/elements/source-repositories/extra-data.d/98-source-repositories
+index c542cb0..0a0e933 100755
+--- a/elements/source-repositories/extra-data.d/98-source-repositories
++++ b/elements/source-repositories/extra-data.d/98-source-repositories
+@@ -3,6 +3,11 @@
+ set -eu
+ set -o pipefail
+ 
++# Don't provide any source repositories in environments where they are not allowed
++if [ -n "${NO_SOURCE_REPOSITORIES:-}" ]; then
++    exit 0
++fi
++
+ # If the old cache exists, move it to the new name
+ function make_new_cache(){
+     local OLD_CACHE_BASE=$1

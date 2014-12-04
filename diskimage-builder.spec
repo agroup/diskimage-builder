@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	5%{?dist}
+Release:	14%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -11,6 +11,14 @@ Patch0001: 0001-svc-map-requires-PyYAML.patch
 Patch0002: 0002-Enable-dracut-deploy-ramdisks.patch
 Patch0003: 0003-Move-busybox-binary-dep-to-ramdisk-element.patch
 Patch0004: 0004-Unset-trap-before-dracut-ramdisk-build-script-exits.patch
+Patch0005: 0005-Install-lsb_release-from-package.patch
+Patch0006: 0006-Simplify-Dracut-cmdline-script.patch
+Patch0007: 0007-Use-binary-deps.d-for-dracut-ramdisks.patch
+Patch0008: 0008-Remove-duplicate-binary-deps-from-dracut-ramdisk.patch
+Patch0009: 0009-Enable-RHEL-Registration.patch
+Patch0010: 0010-Update-RHEL-Registration.patch
+Patch0011: 0011-Allow-source-repositories-to-be-disabled-completely.patch
+Patch0012: 0012-Allow-injecting-arbitrary-yum-repo-configuration.patch
 
 BuildArch: noarch
 BuildRequires: python2-devel
@@ -33,6 +41,14 @@ Requires: dib-utils
 %patch0002 -p1
 %patch0003 -p1
 %patch0004 -p1
+%patch0005 -p1
+%patch0006 -p1
+%patch0007 -p1
+%patch0008 -p1
+%patch0009 -p1
+%patch0010 -p1
+%patch0011 -p1
+%patch0012 -p1
 
 %build
 %{__python} setup.py build
@@ -60,6 +76,12 @@ chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/s
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/install.d/20-install-dracut-deps
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
+# Patch 0007-Use-binary-deps.d-for-dracut-ramdisks.patch has the same issue
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/ramdisk-base/post-install.d/01-ensure-binaries
+# As does patch 0009-Enable-RHEL-Registration.patch
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/finalise.d/99-unregister
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/pre-install.d/00-rhel-registration
 
 %description
 Components of TripleO that are responsible for building disk images.
@@ -73,6 +95,33 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Thu Dec 04 2014 James Slagle <jslagle@redhat.com> 0.1.34-14
+- Allow injecting arbitrary yum repo configuration
+
+* Fri Nov 21 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-13
+- Allow source-repositories to be disabled completely
+
+* Thu Nov 20 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-12
+- Update RHEL Registration
+
+* Tue Nov 18 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-11
+- Enable RHEL Registration
+
+* Fri Nov 14 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-10
+- Remove duplicate binary-deps from dracut-ramdisk
+
+* Fri Nov 14 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-9
+- Fix perms on binary-deps patch
+
+* Fri Nov 14 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-8
+- Use binary-deps.d for dracut ramdisks
+
+* Thu Nov 13 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-7
+- Simplify Dracut cmdline script
+
+* Tue Nov 11 2014 Ben Nemec <bnemec@redhat.com> 0.1.34-6
+- Install lsb_release from package
+
 * Thu Oct 23 2014 James Slagle <jslagle@redhat.com> 0.1.34-5
 - Unset trap before dracut ramdisk build script exits
 
