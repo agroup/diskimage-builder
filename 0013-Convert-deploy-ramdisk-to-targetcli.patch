@@ -1,0 +1,229 @@
+From b7728c659a3b3b1dc57a4810fc730fa8aadacdc2 Mon Sep 17 00:00:00 2001
+From: Ben Nemec <bnemec@redhat.com>
+Date: Thu, 4 Dec 2014 16:50:00 -0600
+Subject: [PATCH] Convert deploy ramdisk to targetcli
+
+Change-Id: Ia1d017ddf7a456250d25c058139864eb36f55816
+---
+ elements/deploy-ironic/binary-deps.d/deploy-ironic |  2 -
+ .../dracut-ramdisk/binary-deps.d/dracut-ramdisk    |  5 ++
+ .../extra-data.d/scripts/module/deploy-cmdline.sh  |  2 +-
+ .../extra-data.d/scripts/module/module-setup.sh    | 12 +++++
+ .../extra-data.d/scripts/module/python-deps        | 57 ++++++++++++++++++++++
+ .../extra-data.d/scripts/targetcli-wrapper         | 12 +++++
+ .../install.d/20-install-dracut-deps               |  3 +-
+ .../post-install.d/99-build-dracut-ramdisk         |  3 +-
+ .../ramdisk-base/extra-data.d/scripts/d/init-func  | 17 ++++---
+ .../ramdisk-base/init.d/40-check-network-ready     |  2 +-
+ 10 files changed, 101 insertions(+), 14 deletions(-)
+ create mode 100755 elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
+ create mode 100755 elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+
+diff --git a/elements/deploy-ironic/binary-deps.d/deploy-ironic b/elements/deploy-ironic/binary-deps.d/deploy-ironic
+index 1bb3f38..13368f8 100644
+--- a/elements/deploy-ironic/binary-deps.d/deploy-ironic
++++ b/elements/deploy-ironic/binary-deps.d/deploy-ironic
+@@ -1,3 +1 @@
+ curl
+-tgtadm
+-tgtd
+diff --git a/elements/dracut-ramdisk/binary-deps.d/dracut-ramdisk b/elements/dracut-ramdisk/binary-deps.d/dracut-ramdisk
+index 03476ce..ea03023 100644
+--- a/elements/dracut-ramdisk/binary-deps.d/dracut-ramdisk
++++ b/elements/dracut-ramdisk/binary-deps.d/dracut-ramdisk
+@@ -10,3 +10,8 @@ nc
+ wget
+ tftp
+ grep
++targetcli
++
++which
++strace
++ldd
+\ No newline at end of file
+diff --git a/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh b/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
+index 2089f0f..28e2743 100755
+--- a/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
++++ b/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
+@@ -12,7 +12,7 @@ rootok=1
+ # Override /proc/cmdline to rewrite it in a way dracut can grok.
+ sed 's/\(ip=\S\+\)/\1:::off/' /proc/cmdline > /run/cmdline
+ # Map the existing "troubleshoot" kernel param to the Dracut equivalent.
+-sed -i 's/troubleshoot=/rd.shell=/' /run/cmdline
++#sed -i 's/troubleshoot=/rd.shell=/' /run/cmdline
+ mount -n --bind -o ro /run/cmdline /proc/cmdline
+ # Force Dracut to re-read the cmdline args
+ CMDLINE=
+diff --git a/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh b/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
+index 694e8d4..aa481c3 100755
+--- a/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
++++ b/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
+@@ -12,6 +12,18 @@ depends() {
+ }
+ 
+ install() {
++    set -x
+     inst_hook cmdline 80 "$moddir/deploy-cmdline.sh"
+     inst_hook pre-mount 50 "$moddir/init.sh"
++    # Something in this directory gets missed by the python-deps call below.
++    for i in /usr/lib64/python2.7/site-packages/kmod/*; do
++        inst $i
++    done
++    $moddir/python-deps /bin/targetcli | while read dep; do
++        case "$dep" in
++            *.so) inst_library $dep ;;
++            *.py) inst_simple $dep ;;
++            *) inst $dep ;;
++        esac
++    done
+ }
+diff --git a/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps b/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
+new file mode 100755
+index 0000000..dbd349c
+--- /dev/null
++++ b/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
+@@ -0,0 +1,57 @@
++#!/usr/bin/python
++# NOTE(bnemec): Borrowed wholesale from anaconda-dracut
++# https://apps.fedoraproject.org/packages/anaconda-dracut
++
++# python-deps - find the dependencies of a given python script.
++
++import os, sys
++from modulefinder import ModuleFinder
++from distutils.sysconfig import *
++
++sitedir = get_python_lib()
++libdir = get_config_var('LIBDEST')
++
++# A couple helper functions...
++def moduledir(pyfile):
++    '''Given a python file, return the module dir it belongs to, or None.'''
++    for topdir in sitedir, libdir:
++        relpath = os.path.relpath(pyfile, topdir)
++        if '/' not in relpath: continue
++        modname = relpath.split('/')[0]
++        if modname not in ('..', 'site-packages'):
++            return os.path.join(topdir, modname)
++
++def pyfiles(moddir):
++    '''basically, "find $moddir -type f -name "*.py"'''
++    for curdir, dirs, files in os.walk(moddir):
++        for f in files:
++            if f.endswith(".py"):
++                yield os.path.join(curdir, f)
++
++# OK. Use modulefinder to find all the modules etc. this script uses!
++mods = []
++deps = []
++for script in sys.argv[1:]:
++    finder = ModuleFinder()
++    finder.run_script(script) # parse the script
++    for name, mod in finder.modules.iteritems():
++        if not mod.__file__: # this module is builtin, so we can skip it
++            continue
++
++        if mod.__file__ not in deps: # grab the file itself
++            deps.append(mod.__file__)
++
++        moddir = moduledir(mod.__file__)  # if it's part of a module...
++        if moddir and moddir not in mods: #
++            deps += list(pyfiles(moddir)) # ...get the whole module
++            mods.append(moddir)
++
++# Include some bits that the python install itself needs
++print get_makefile_filename()
++print get_config_h_filename()
++print os.path.join(libdir,'site.py')
++print os.path.join(libdir,'sysconfig.py')
++
++# And print the list of deps.
++for d in deps:
++    print d
+diff --git a/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper b/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+new file mode 100755
+index 0000000..f0e5767
+--- /dev/null
++++ b/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+@@ -0,0 +1,12 @@
++#!/usr/bin/python
++
++import rtslib
++
++class MyISCSIFabricModule(rtslib.fabric.ISCSIFabricModule):
++    def __init__(self):
++        super(rtslib.fabric.ISCSIFabricModule, self).__init__('iscsi')
++        self.wwn_types = ('free',)
++rtslib.fabric.fabric_modules['iscsi'] = MyISCSIFabricModule
++
++import targetcli_bin
++targetcli_bin.main()
+diff --git a/elements/dracut-ramdisk/install.d/20-install-dracut-deps b/elements/dracut-ramdisk/install.d/20-install-dracut-deps
+index 8621d89..34665a2 100755
+--- a/elements/dracut-ramdisk/install.d/20-install-dracut-deps
++++ b/elements/dracut-ramdisk/install.d/20-install-dracut-deps
+@@ -21,4 +21,5 @@ if [ 'ubuntu' = "$DISTRO_NAME" ]; then
+ fi
+ 
+ PACKAGES=$(pkg-map --element dracut-ramdisk ncat tftp)
+-install-packages $DRACUT_NETWORK wget $PACKAGES
++# TODO: strace is just for debugging
++install-packages $DRACUT_NETWORK wget $PACKAGES targetcli strace
+diff --git a/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk b/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
+index 6805f3e..d1e3cee 100755
+--- a/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
++++ b/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
+@@ -54,8 +54,9 @@ dracut -N \
+     --install "$(cat /etc/dib_binary_deps)" \
+     --kernel-cmdline "rd.shell rd.debug rd.neednet=1 rd.driver.pre=ahci" \
+     --include "$TMP_MOUNT_PATH/init-func" /init-func \
++    --include "$_LIB/scripts/targetcli-wrapper" /targetcli-wrapper \
+     --kver "${KERNEL_VERSION}" \
+-    --add-drivers "virtio virtio_net virtio_blk" \
++    --add-drivers "virtio virtio_net virtio_blk target_core_mod iscsi_target_mod target_core_iblock target_core_file target_core_pscsi configfs" \
+     -o "dash plymouth" \
+     /tmp/ramdisk
+ 
+diff --git a/elements/ramdisk-base/extra-data.d/scripts/d/init-func b/elements/ramdisk-base/extra-data.d/scripts/d/init-func
+index f68a54a..e87ccb0 100755
+--- a/elements/ramdisk-base/extra-data.d/scripts/d/init-func
++++ b/elements/ramdisk-base/extra-data.d/scripts/d/init-func
+@@ -246,18 +246,19 @@ function start_iscsi_target() {
+     # used by tgtd
+     mkdir -p /var/run
+ 
+-    tgtd
+-    wait_for 10 0.5 check_tgtd_socket
++    ln -s /usr/bin/targetcli /targetcli_bin.py
++    /targetcli-wrapper /backstores/block create block1 dev=$dev
++    /targetcli-wrapper /iscsi create $iqn
++    /targetcli-wrapper /iscsi/$iqn/tpg1/luns create /backstores/block/block1 1
++    /targetcli-wrapper /iscsi/$iqn/tpg1/portals create $BOOT_IP_ADDRESS
++    /targetcli-wrapper /iscsi/$iqn/tpg1 set attribute authentication=0
++    /targetcli-wrapper /iscsi/$iqn/tpg1 set attribute demo_mode_write_protect=0
++    /targetcli-wrapper /iscsi/$iqn/tpg1 set attribute generate_node_acls=1
+ 
+-    tgtadm --lld iscsi --mode target --op new --tid 1 --targetname "$iqn"
+-    tgtadm --lld iscsi --mode logicalunit --op new --tid 1 --lun 1 --backing-store "$dev"
+-    tgtadm --lld iscsi --mode target --op bind --tid 1 --initiator-address "$cli"
+ }
+ 
+ function stop_iscsi_target() {
+-    tgtadm --lld iscsi --mode logicalunit --op delete --tid 1 --lun 1
+-    tgtadm --lld iscsi --mode target --op delete --tid 1
+-    killall tgtd
++    /targetcli-wrapper clearconfig confirm=True
+ }
+ 
+ function troubleshoot() {
+diff --git a/elements/ramdisk-base/init.d/40-check-network-ready b/elements/ramdisk-base/init.d/40-check-network-ready
+index 1236ce3..f47a7fc 100644
+--- a/elements/ramdisk-base/init.d/40-check-network-ready
++++ b/elements/ramdisk-base/init.d/40-check-network-ready
+@@ -3,4 +3,4 @@ if [ -n "$BOOT_SERVER" ]; then
+     wait_for 6 5 ping -c 5 -q "$BOOT_SERVER" > /dev/null
+ fi
+ 
+-echo "network ready"
+\ No newline at end of file
++echo "network ready"

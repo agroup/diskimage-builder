@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	14%{?dist}
+Release:	15%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -19,6 +19,7 @@ Patch0009: 0009-Enable-RHEL-Registration.patch
 Patch0010: 0010-Update-RHEL-Registration.patch
 Patch0011: 0011-Allow-source-repositories-to-be-disabled-completely.patch
 Patch0012: 0012-Allow-injecting-arbitrary-yum-repo-configuration.patch
+Patch0013: 0013-Convert-deploy-ramdisk-to-targetcli.patch
 
 BuildArch: noarch
 BuildRequires: python2-devel
@@ -49,6 +50,7 @@ Requires: dib-utils
 %patch0010 -p1
 %patch0011 -p1
 %patch0012 -p1
+%patch0013 -p1
 
 %build
 %{__python} setup.py build
@@ -95,6 +97,9 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Sat Dec 06 2014 James Slagle <jslagle@redhat.com> 0.1.34-15
+- Convert deploy ramdisk to targetcli
+
 * Thu Dec 04 2014 James Slagle <jslagle@redhat.com> 0.1.34-14
 - Allow injecting arbitrary yum repo configuration
 
