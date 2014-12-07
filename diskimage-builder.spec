@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	15%{?dist}
+Release:	16%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -84,6 +84,9 @@ chmod +x %{buildroot}/%{_datadir}/%{name}/elements/ramdisk-base/post-install.d/0
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/finalise.d/99-unregister
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
 chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/pre-install.d/00-rhel-registration
+# For Patch0013: 0013-Convert-deploy-ramdisk-to-targetcli.patch
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
 
 %description
 Components of TripleO that are responsible for building disk images.
@@ -97,6 +100,9 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Sun Dec 07 2014 James Slagle <jslagle@redhat.com> 0.1.34-16
+- Make files created by patch 0013-Convert-deploy-ramdisk-to-targetcli.patch +x
+
 * Sat Dec 06 2014 James Slagle <jslagle@redhat.com> 0.1.34-15
 - Convert deploy ramdisk to targetcli
 
