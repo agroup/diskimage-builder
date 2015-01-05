@@ -1,0 +1,91 @@
+From b4e6e579d106c75dd5a5142b4e09d1805bdd4711 Mon Sep 17 00:00:00 2001
+From: Ryan Brady <rbrady@redhat.com>
+Date: Thu, 4 Dec 2014 16:09:18 -0500
+Subject: [PATCH] Fix repo enablement for RHEL during registration
+
+Previously the REG_REPOS value was a space delimited list of repo
+names, but the spaces were incompatible with passing through json.
+If you pass a list in json through the heat parameter, the output
+is the string representation of a python list of unicode vaules.
+This patch changes the rhel-registration scripts to process the
+REG_REPOS value as a comma delimited list which is more easily
+passed through json.  Both scripts have been updated to remain
+consistent.
+
+Change-Id: I21b3fd115e53aa3b0fa4af9bbfb1f08b6fe163ab
+---
+ elements/rhel-common/README.md                               | 12 ++++++------
+ .../os-refresh-config/pre-configure.d/06-rhel-registration   |  2 +-
+ elements/rhel-common/pre-install.d/00-rhel-registration      |  2 +-
+ 3 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/elements/rhel-common/README.md b/elements/rhel-common/README.md
+index 4cdd184..d57d165 100644
+--- a/elements/rhel-common/README.md
++++ b/elements/rhel-common/README.md
+@@ -81,8 +81,8 @@ It will change over time as new releases come out.  There are also variants
+ 
+ #### REG\_REPOS
+ A single string representing a list of repository names separated by a
+-space.  Each of the repositories in this string are enabled through
+-subscription manager.  Once you've attached a subscription, you can
++comma (No spaces).  Each of the repositories in this string are enabled
++through subscription manager.  Once you've attached a subscription, you can
+ find available repositories by running subscription-manager repos --list.
+ 
+ #### REG\_SERVER\_URL
+@@ -119,7 +119,7 @@ REG_METHOD=satellite
+ To register with the Red Hat Customer Portal, a common example would be to
+ set the following variables:
+ 
+-REG_REPOS='rhel-7-server-optional-rpms rhel-7-server-extras-rpms'
++REG_REPOS='rhel-7-server-optional-rpms,rhel-7-server-extras-rpms'
+ REG_AUTO_ATTACH=true
+ REG_USER='tripleo'
+ REG_PASSWORD='tripleo'
+@@ -165,8 +165,8 @@ Heat metadata can be used to configure the rhel-common element.
+             # minor release version. This is only used with the auto_attach
+             # option.
+         repos:
+-            # A single string representing a list of repository names separated
+-            # by a space.  Each of the repositories in this string are enabled
++            # A single string representing a list of repository names separated by a
++            # comma (No spaces).  Each of the repositories in this string are enabled
+             # through subscription manager.
+         satellite_url:
+             # The url of the Satellite instance to register with.  Required for
+@@ -214,7 +214,7 @@ use the following metadata:
+ 
+     {
+         "rh_registration":{
+-            "repos":"rhel-7-server-optional-rpms rhel-7-server-extras-rpms",
++            "repos":"rhel-7-server-optional-rpms,rhel-7-server-extras-rpms",
+             "auto_attach":true,
+             "user":"tripleo",
+             "password":"tripleo",
+diff --git a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+index 90306c2..53ef58a 100755
+--- a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
++++ b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+@@ -89,7 +89,7 @@ if [ -n "${REG_ORG:-}" ]; then
+ fi
+ 
+ if [ -n "${REG_REPOS:-}" ]; then
+-    for repo in $REG_REPOS; do
++    for repo in $(echo $REG_REPOS | tr ',' '\n'); do
+         repos="$repos --enable $repo"
+     done
+ fi
+diff --git a/elements/rhel-common/pre-install.d/00-rhel-registration b/elements/rhel-common/pre-install.d/00-rhel-registration
+index f1a528d..fe19593 100755
+--- a/elements/rhel-common/pre-install.d/00-rhel-registration
++++ b/elements/rhel-common/pre-install.d/00-rhel-registration
+@@ -72,7 +72,7 @@ if [ -n "${REG_ORG:-}" ]; then
+ fi
+ 
+ if [ -n "${REG_REPOS:-}" ]; then
+-    for repo in $REG_REPOS; do
++    for repo in $(echo $REG_REPOS | tr ',' '\n'); do
+         repos="$repos --enable $repo"
+     done
+ fi

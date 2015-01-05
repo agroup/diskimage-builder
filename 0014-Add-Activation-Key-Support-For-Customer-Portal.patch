@@ -1,0 +1,197 @@
+From bb91126803b313d11cde2223848d4dc28782c5bb Mon Sep 17 00:00:00 2001
+From: Ryan Brady <rbrady@redhat.com>
+Date: Wed, 26 Nov 2014 10:25:31 -0500
+Subject: [PATCH] Add Activation Key Support For Customer Portal
+
+This patch adds support to register with the hosted customer portal
+using activation keys.  If an activation key is present in either
+the REG_ACTIVATION_KEY or rh_registration.activation_key, it will
+use that value instead of username and password credentials when
+registering with Satellite or the hosted Customer Portal.  This
+patch also enforces that an org must be set in either the REG_ORG
+or rh_registration.org to use the activation key.
+
+Change-Id: If40dd78ba793d508afb1a5ab345470ee5929afb0
+---
+ .../pre-configure.d/06-rhel-registration           | 47 ++++++++++----------
+ .../rhel-common/pre-install.d/00-rhel-registration | 51 +++++++++++-----------
+ 2 files changed, 51 insertions(+), 47 deletions(-)
+
+diff --git a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+index f85569f..90306c2 100755
+--- a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
++++ b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+@@ -64,12 +64,20 @@ if [ -n "${REG_SERVER_URL:-}" ]; then
+     opts="$opts --serverurl=$REG_SERVER_URL"
+ fi
+ 
+-if [ -n "${REG_USER:-}" ]; then
+-    opts="$opts --username $REG_USER"
+-fi
++if [ -n "${REG_ACTIVATION_KEY:-}" ]; then
++    opts="$opts --activationkey=$REG_ACTIVATION_KEY"
++
++    if [ -z "${REG_ORG:-}" ]; then
++        echo "WARNING: REG_ACTIVATION_KEY set without REG_ORG."
++    fi
++else
++    if [ -n "${REG_PASSWORD:-}" ]; then
++        opts="$opts --password $REG_PASSWORD"
++    fi
+ 
+-if [ -n "${REG_PASSWORD:-}" ]; then
+-    opts="$opts --password $REG_PASSWORD"
++    if [ -n "${REG_USER:-}" ]; then
++        opts="$opts --username $REG_USER"
++    fi
+ fi
+ 
+ if [ -n "${REG_MACHINE_NAME:-}" ]; then
+@@ -79,18 +87,19 @@ fi
+ if [ -n "${REG_ORG:-}" ]; then
+     opts="$opts --org $REG_ORG"
+ fi
+-case "${REG_METHOD:-}" in
+-    portal)
+-        if [ -n "${REG_ACTIVATION_KEY:-}" ]; then
+-            echo "WARNING: Activation keys are not supported by the customer portal at this time."
+-        fi
+ 
+-        if [ -n "${REG_REPOS:-}" ]; then
+-            for repo in $REG_REPOS; do
+-                repos="$repos --enable $repo"
+-            done
+-        fi
++if [ -n "${REG_REPOS:-}" ]; then
++    for repo in $REG_REPOS; do
++        repos="$repos --enable $repo"
++    done
++fi
++
++if [ -n "${REG_TYPE:-}" ]; then
++    opts="$opts --type=$REG_TYPE"
++fi
+ 
++case "${REG_METHOD:-}" in
++    portal)
+         subscription-manager register $opts
+         if [ -z "${REG_AUTO_ATTACH:-}" ]; then
+             subscription-manager attach $attach_opts
+@@ -99,12 +108,6 @@ case "${REG_METHOD:-}" in
+         ;;
+     satellite)
+         repos="$repos --enable ${satellite_repo}"
+-        if [ -n "${REG_REPOS:-}" ]; then
+-            for repo in $REG_REPOS; do
+-                repos="$repos --enable $repo"
+-            done
+-        fi
+-
+         rpm -Uvh "$REG_SAT_URL/pub/katello-ca-consumer-latest.noarch.rpm" || true
+         subscription-manager register $opts
+         subscription-manager $repos
+@@ -115,5 +118,5 @@ case "${REG_METHOD:-}" in
+         ;;
+     *)
+         echo "WARNING: only 'portal' and 'satellite' are valid values for REG_METHOD."
+-        exit 0
++        exit 0 # keeps the stack from failing if you don't set a value in REG_METHOD
+ esac
+diff --git a/elements/rhel-common/pre-install.d/00-rhel-registration b/elements/rhel-common/pre-install.d/00-rhel-registration
+index ced9529..f1a528d 100755
+--- a/elements/rhel-common/pre-install.d/00-rhel-registration
++++ b/elements/rhel-common/pre-install.d/00-rhel-registration
+@@ -5,6 +5,7 @@ set -o pipefail
+ opts=
+ attach_opts=
+ repos="repos --enable rhel-7-server-rpms"
++satellite_repo="rhel-7-server-rh-common-beta-rpms"
+ 
+ if [ -n "${REG_AUTO_ATTACH:-}" ]; then
+     opts="$opts --auto-attach"
+@@ -30,8 +31,6 @@ else
+     fi
+ fi
+ 
+-
+-
+ if [ -n "${REG_BASE_URL:-}" ]; then
+     opts="$opts --baseurl=$REG_BASE_URL"
+ fi
+@@ -48,12 +47,20 @@ if [ -n "${REG_SERVER_URL:-}" ]; then
+     opts="$opts --serverurl=$REG_SERVER_URL"
+ fi
+ 
+-if [ -n "${REG_USER:-}" ]; then
+-    opts="$opts --username $REG_USER"
+-fi
++if [ -n "${REG_ACTIVATION_KEY:-}" ]; then
++    opts="$opts --activationkey=$REG_ACTIVATION_KEY"
+ 
+-if [ -n "${REG_PASSWORD:-}" ]; then
+-    opts="$opts --password $REG_PASSWORD"
++    if [ -z "${REG_ORG:-}" ]; then
++        echo "WARNING: REG_ACTIVATION_KEY set without REG_ORG."
++    fi
++else
++    if [ -n "${REG_PASSWORD:-}" ]; then
++        opts="$opts --password $REG_PASSWORD"
++    fi
++
++    if [ -n "${REG_USER:-}" ]; then
++        opts="$opts --username $REG_USER"
++    fi
+ fi
+ 
+ if [ -n "${REG_MACHINE_NAME:-}" ]; then
+@@ -64,18 +71,18 @@ if [ -n "${REG_ORG:-}" ]; then
+     opts="$opts --org $REG_ORG"
+ fi
+ 
+-case "${REG_METHOD:-}" in
+-    portal)
+-        if [ -n "${REG_ACTIVATION_KEY:-}" ]; then
+-            echo "WARNING: Activation keys are not supported by the customer portal at this time."
+-        fi
++if [ -n "${REG_REPOS:-}" ]; then
++    for repo in $REG_REPOS; do
++        repos="$repos --enable $repo"
++    done
++fi
+ 
+-        if [ -n "${REG_REPOS:-}" ]; then
+-            for repo in $REG_REPOS; do
+-                repos="$repos --enable $repo"
+-            done
+-        fi
++if [ -n "${REG_TYPE:-}" ]; then
++    opts="$opts --type=$REG_TYPE"
++fi
+ 
++case "${REG_METHOD:-}" in
++    portal)
+         subscription-manager register $opts
+         if [ -z "${REG_AUTO_ATTACH:-}" ]; then
+             subscription-manager attach $attach_opts
+@@ -83,13 +90,7 @@ case "${REG_METHOD:-}" in
+         subscription-manager $repos
+         ;;
+     satellite)
+-        repos="$repos --enable rhel-7-server-rh-common-beta-rpms"
+-        if [ -n "${REG_REPOS:-}" ]; then
+-            for repo in $REG_REPOS; do
+-                repos="$repos --enable $repo"
+-            done
+-        fi
+-
++        repos="$repos --enable ${satellite_repo}"
+         rpm -Uvh "$REG_SAT_URL/pub/katello-ca-consumer-latest.noarch.rpm" || true
+         subscription-manager register $opts
+         subscription-manager $repos
+@@ -98,5 +99,5 @@ case "${REG_METHOD:-}" in
+         ;;
+     *)
+         echo "WARNING: only 'portal' and 'satellite' are valid values for REG_METHOD."
+-        exit 1
++        exit 1 # RHEL requires registration, fail image build if REG_Method isn't set
+ esac

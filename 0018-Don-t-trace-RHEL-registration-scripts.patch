@@ -1,0 +1,40 @@
+From b37c823293334fa0d49e4c27fd7956072adc72d1 Mon Sep 17 00:00:00 2001
+From: Ben Nemec <bnemec@redhat.com>
+Date: Wed, 17 Dec 2014 16:39:27 -0600
+Subject: [PATCH] Don't trace RHEL registration scripts
+
+These scripts are littered with references to passwords and keys,
+so rather than try to disable tracing in every one of those places
+I propose we simply turn it off for the scripts.  This will likely
+need to be revisited after the global tracing discussion is
+resolved anyway.
+
+Change-Id: I805015300bf01b2f8eec9f70ccfdf533dd9386b3
+Related-Bug: 1298205
+---
+ .../rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration  | 2 +-
+ elements/rhel-common/pre-install.d/00-rhel-registration                 | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+index e33598d..306e242 100755
+--- a/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
++++ b/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+@@ -1,5 +1,5 @@
+ #!/bin/bash
+-set -eux
++set -eu
+ set -o pipefail
+ 
+ REG_ACTIVATION_KEY="$(os-apply-config --key rh_registration.activation_key --type raw --key-default '')"
+diff --git a/elements/rhel-common/pre-install.d/00-rhel-registration b/elements/rhel-common/pre-install.d/00-rhel-registration
+index 97cfddf..bb979f8 100755
+--- a/elements/rhel-common/pre-install.d/00-rhel-registration
++++ b/elements/rhel-common/pre-install.d/00-rhel-registration
+@@ -1,5 +1,5 @@
+ #!/bin/bash
+-set -eux
++set -eu
+ set -o pipefail
+ 
+ opts=
