@@ -85,23 +85,23 @@ rm -f %{buildroot}%{_bindir}/dib-run-parts
 
 # Patch 0002-Move-install-bin-from-rpm-distro-to-yum.patch
 # creates a new file, but the perms are not set correctly when patch runs
-chmod +x elements/yum/pre-install.d/01-yum-install-bin
-chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
-chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
-chmod +x elements/dracut-ramdisk/install.d/20-install-dracut-deps
-chmod +x elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/pre-install.d/01-yum-install-bin
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/install.d/20-install-dracut-deps
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
 # Patch 0007-Use-binary-deps.d-for-dracut-ramdisks.patch has the same issue
-chmod +x elements/ramdisk-base/post-install.d/01-ensure-binaries
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/ramdisk-base/post-install.d/01-ensure-binaries
 # As does patch 0009-Enable-RHEL-Registration.patch
-chmod +x elements/rhel-common/finalise.d/99-unregister
-chmod +x elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
-chmod +x elements/rhel-common/pre-install.d/00-rhel-registration
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/finalise.d/99-unregister
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/pre-install.d/00-rhel-registration
 # For 0012-Allow-injecting-arbitrary-yum-repo-configuration.patch
-chmod +x elements/yum/extra-data.d/99-yum-repo-conf
-chmod +x elements/yum/cleanup.d/99-remove-yum-repo-conf
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/extra-data.d/99-yum-repo-conf
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/cleanup.d/99-remove-yum-repo-conf
 # For Patch0013: 0013-Convert-deploy-ramdisk-to-targetcli.patch
-chmod +x elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
-chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
 
 %description
 Components of TripleO that are responsible for building disk images.
