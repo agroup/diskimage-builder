@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	19%{?dist}
+Release:	99.patches%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -25,6 +25,7 @@ Patch0015: 0015-Fix-repo-enablement-for-RHEL-during-registration.patch
 Patch0016: 0016-Deprecates-username-and-password-from-boot-time-regi.patch
 Patch0017: 0017-Allow-for-disabling-rhel-registration.patch
 Patch0018: 0018-Don-t-trace-RHEL-registration-scripts.patch
+Patch0019: 0019-Ironic-Local-boot.patch
 
 BuildArch: noarch
 BuildRequires: python2-devel
@@ -61,6 +62,7 @@ Requires: dib-utils
 %patch0016 -p1
 %patch0017 -p1
 %patch0018 -p1
+%patch0019 -p1
 
 %build
 %{__python} setup.py build
@@ -83,23 +85,23 @@ rm -f %{buildroot}%{_bindir}/dib-run-parts
 
 # Patch 0002-Move-install-bin-from-rpm-distro-to-yum.patch
 # creates a new file, but the perms are not set correctly when patch runs
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/pre-install.d/01-yum-install-bin
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/install.d/20-install-dracut-deps
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
+chmod +x elements/yum/pre-install.d/01-yum-install-bin
+chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/deploy-cmdline.sh
+chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/module-setup.sh
+chmod +x elements/dracut-ramdisk/install.d/20-install-dracut-deps
+chmod +x elements/dracut-ramdisk/post-install.d/99-build-dracut-ramdisk
 # Patch 0007-Use-binary-deps.d-for-dracut-ramdisks.patch has the same issue
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/ramdisk-base/post-install.d/01-ensure-binaries
+chmod +x elements/ramdisk-base/post-install.d/01-ensure-binaries
 # As does patch 0009-Enable-RHEL-Registration.patch
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/finalise.d/99-unregister
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/rhel-common/pre-install.d/00-rhel-registration
+chmod +x elements/rhel-common/finalise.d/99-unregister
+chmod +x elements/rhel-common/os-refresh-config/pre-configure.d/06-rhel-registration
+chmod +x elements/rhel-common/pre-install.d/00-rhel-registration
 # For 0012-Allow-injecting-arbitrary-yum-repo-configuration.patch
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/extra-data.d/99-yum-repo-conf
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/yum/cleanup.d/99-remove-yum-repo-conf
+chmod +x elements/yum/extra-data.d/99-yum-repo-conf
+chmod +x elements/yum/cleanup.d/99-remove-yum-repo-conf
 # For Patch0013: 0013-Convert-deploy-ramdisk-to-targetcli.patch
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
-chmod +x %{buildroot}/%{_datadir}/%{name}/elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
+chmod +x elements/dracut-ramdisk/extra-data.d/scripts/targetcli-wrapper
+chmod +x elements/dracut-ramdisk/extra-data.d/scripts/module/python-deps
 
 %description
 Components of TripleO that are responsible for building disk images.
@@ -113,6 +115,9 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Mon Jan 19 2015 James Slagle <jslagle@redhat.com> 0.1.34-99.patches
+- Add patch 0019-Ironic-Local-boot.patch
+
 * Mon Jan 05 2015 James Slagle <jslagle@redhat.com> 0.1.34-19
 - Don't trace RHEL registration scripts
 - Allow for disabling rhel registration
