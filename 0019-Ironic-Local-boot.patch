@@ -1,4 +1,4 @@
-From b3ba32e9fd1e7474a54df8edd520584e9b52d431 Mon Sep 17 00:00:00 2001
+From ab76a6f63e3a95c0c787d920b143df4c2464cd5e Mon Sep 17 00:00:00 2001
 From: Lucas Alvares Gomes <lucasagomes@gmail.com>
 Date: Fri, 9 Jan 2015 14:36:32 +0000
 Subject: [PATCH] Ironic: Local boot
@@ -14,8 +14,9 @@ Conflicts:
 	elements/deploy-ironic/package-installs.yaml
 ---
  elements/deploy-ironic/binary-deps.d/deploy-ironic |  1 +
- elements/deploy-ironic/init.d/80-deploy-ironic     | 51 ++++++++++++++++++++++
- 2 files changed, 52 insertions(+)
+ elements/deploy-ironic/init.d/80-deploy-ironic     | 53 ++++++++++++++++++++++
+ .../install.d/package-installs-deploy-ironic       |  1 +
+ 3 files changed, 55 insertions(+)
 
 diff --git a/elements/deploy-ironic/binary-deps.d/deploy-ironic b/elements/deploy-ironic/binary-deps.d/deploy-ironic
 index 13368f8..6db325a 100644
@@ -25,7 +26,7 @@ index 13368f8..6db325a 100644
  curl
 +partprobe
 diff --git a/elements/deploy-ironic/init.d/80-deploy-ironic b/elements/deploy-ironic/init.d/80-deploy-ironic
-index d52ccde..1c310e9 100644
+index d52ccde..ed4c116 100644
 --- a/elements/deploy-ironic/init.d/80-deploy-ironic
 +++ b/elements/deploy-ironic/init.d/80-deploy-ironic
 @@ -1,4 +1,5 @@
@@ -34,7 +35,7 @@ index d52ccde..1c310e9 100644
  
  if [ -z "$ISCSI_TARGET_IQN" ]; then
    err_msg "iscsi_target_iqn is not defined"
-@@ -59,3 +60,53 @@ nc -l -p 10000
+@@ -59,3 +60,55 @@ nc -l -p 10000
  echo "stop iSCSI target on $target_disk"
  
  stop_iscsi_target
@@ -87,7 +88,17 @@ index d52ccde..1c310e9 100644
 +         echo "Bootloader successfully installed"
 +    fi
 +
++    # TODO(lucasagomes): This is just for the PoC, remove it later
++    poweroff -f
 +fi
+diff --git a/elements/deploy-ironic/install.d/package-installs-deploy-ironic b/elements/deploy-ironic/install.d/package-installs-deploy-ironic
+index 3da7a78..5ba802e 100644
+--- a/elements/deploy-ironic/install.d/package-installs-deploy-ironic
++++ b/elements/deploy-ironic/install.d/package-installs-deploy-ironic
+@@ -1,2 +1,3 @@
+ curl
+ tgt
++parted
 -- 
 1.9.3
 

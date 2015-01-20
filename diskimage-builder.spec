@@ -1,7 +1,7 @@
 Name:		diskimage-builder
 Summary:	Image building tools for OpenStack
 Version:	0.1.34
-Release:	99.patches%{?dist}
+Release:	100.patches%{?dist}
 License:	ASL 2.0
 Group:		System Environment/Base
 URL:		https://launchpad.net/diskimage-builder
@@ -115,8 +115,10 @@ Components of TripleO that are responsible for building disk images.
 %{_datadir}/%{name}/elements
 
 %changelog
+* Tue Jan 20 2015 James Slagle <jslagle@redhat.com> 0.1.34-100.patches
+- Update patch 0019-Ironic-Local-boot.patch
+
 * Mon Jan 19 2015 James Slagle <jslagle@redhat.com> 0.1.34-99.patches
-- Add patch 0019-Ironic-Local-boot.patch
 
 * Mon Jan 05 2015 James Slagle <jslagle@redhat.com> 0.1.34-19
 - Don't trace RHEL registration scripts
